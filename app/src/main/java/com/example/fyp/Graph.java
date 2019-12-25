@@ -15,11 +15,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 
 
@@ -27,60 +25,61 @@ public class Graph extends AppCompatActivity {
 
 
     FirebaseDatabase database;
-    DatabaseReference reference,reference2;
+    DatabaseReference reference, reference2;
     FirebaseAuth firebaseAuth = FirebaseAuth.getInstance(); // You are not initializing firebase auth object
-
+    final String currentUserID = firebaseAuth.getCurrentUser().getUid();
     temperature tempobj;
-
-    SimpleDateFormat sdf = new SimpleDateFormat("hh:mm");
     GraphView graphView;
     LineGraphSeries series;
+    GraphHandler graph;
+    SimpleDateFormat sdf = new SimpleDateFormat("hh:mm");
 
-    final String currentUserID = firebaseAuth.getCurrentUser().getUid();
-
-    ArrayList<DataPoint> myList = new ArrayList<DataPoint>();
 
     int a;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
 
-        graphView = (GraphView)findViewById(R.id.graphView);
+        graphView = findViewById(R.id.graphView); // OK so github obv is a place where people share code. I just logged you in inside your computer into github and added the project files there
+        // If you had just copied everything to your drive then /build folder would have copied too. It is supposed to be unique to every device, now i have only the code that I need to run this on my mac
 
-
+// OK so first we're gonna have 24 hours on it, later we can change the scrolling
         graphView.getViewport().setScalable(true);  // activate horizontal zooming and scrolling
         graphView.getViewport().setScrollable(true);  // activate horizontal scrolling
-        graphView.getViewport().setScalableY(true);  // activate horizontal and vertical zooming and scrolling
-        graphView.getViewport().setScrollableY(true);  // activate vertical scrolling ll try shooting in the dark ;)
-        series =  new LineGraphSeries();
+//        graphView.getViewport().setScalableY(true);  // activate horizontal and vertical zooming and scrolling
+//        graphView.getViewport().setScrollableY(true);  // activate vertical scrolling ll try shooting in the dark ;) These are the reason why these 4 lines make the graph extremely long
+        series = new LineGraphSeries();
         graphView.addSeries(series);
 
 
         graphView.getViewport().setMinY(1);
         graphView.getViewport().setMaxY(40);
 
+        graphView.getViewport().setXAxisBoundsManual(true);
+        graphView.getViewport().setMinX(new Date().getTime() - 10 * 1000 * 60);
+        graphView.getViewport().setMaxX(new Date().getTime());
+
         graphView.getViewport().setYAxisBoundsManual(true);
 
         database = FirebaseDatabase.getInstance();
         reference = database.getReference("Temp");
-
-
-
+        graph = new GraphHandler(series);
 
 
         setListeners();
         //graphView.getGridLabelRenderer().setNumVerticalLabels(40);
         graphView.getGridLabelRenderer().setNumHorizontalLabels(5);
 
-        graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter(){
+        graphView.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
             @Override
             public String formatLabel(double value, boolean isValueX) {
 
-                if(isValueX) {
+                if (isValueX) {
                     return sdf.format(new Date((long) value));
-                }else {
+                } else {
                     return super.formatLabel(value, isValueX);
                 }
             }
@@ -94,10 +93,10 @@ public class Graph extends AppCompatActivity {
         reference2.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                tempobj=dataSnapshot.getValue(temperature.class);
-                a=tempobj.getCelsius();
+                tempobj = dataSnapshot.getValue(temperature.class);
+                a = tempobj.getCelsius();
 
-                updateGraph(a);
+                graph.updateGraph(a);
             }
 
             @Override
@@ -109,25 +108,9 @@ public class Graph extends AppCompatActivity {
         long x = new Date().getTime();
         int y = a;
 
-        PointValue pointValue = new PointValue(x,y);
+        PointValue pointValue = new PointValue(x, y);
 
         reference.child(id).setValue(pointValue);
-    }
-
-    private void updateGraph(int celsiusReading) {
-        String id = reference.push().getKey();
-        long x = new Date().getTime();
-        int y = celsiusReading;
-
-        PointValue pointValue = new PointValue(x,y); // show me where you are updating graph
-
-        DataPoint newDataPoint = new DataPoint(pointValue.getxValue(),pointValue.getyValue());
-        myList.add(newDataPoint);
-
-        DataPoint[] array = (DataPoint[]) myList.toArray(new DataPoint[myList.size()]);
-
-        series.resetData(array);
-
     }
 
 
@@ -135,30 +118,29 @@ public class Graph extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-       reference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                DataPoint[] dp = new DataPoint[(int) dataSnapshot.getChildrenCount()];
-                int index = 0;
-
-                for(DataSnapshot myDataSnapshot : dataSnapshot.getChildren())
-                {
-                    PointValue pointValue = myDataSnapshot.getValue(PointValue.class);
-
-                    dp[index] = new DataPoint(pointValue.getxValue(),pointValue.getyValue());
-                    index++;
-                }
-
-                series.resetData(dp);
-
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-            }
-        });
-
+//       reference.addValueEventListener(new ValueEventListener() {
+//            @Override
+//            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+//                DataPoint[] dp = new DataPoint[(int) dataSnapshot.getChildrenCount()];
+//                int index = 0;
+//
+//                for(DataSnapshot myDataSnapshot : dataSnapshot.getChildren())
+//                {
+//                    PointValue pointValue = myDataSnapshot.getValue(PointValue.class);
+//
+//                    dp[index] = new DataPoint(pointValue.getxValue(),pointValue.getyValue());
+//                    index++;
+//                }
+//
+//                series.resetData(dp);
+//
+//            }
+//
+//            @Override
+//            public void onCancelled(@NonNull DatabaseError databaseError) {
+//
+//            }
+//        });
 
 
     }
